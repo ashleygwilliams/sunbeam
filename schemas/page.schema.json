@@ -86,7 +86,7 @@
                     "type": "string"
                 },
                 "preview": {
-                    "$ref": "#/$defs/preview"
+                    "$ref": "#/$defs/textOrCommand"
                 },
                 "actions": {
                     "type": "array",
@@ -116,7 +116,7 @@
                     "description": "The subtitle of the item."
                 },
                 "preview": {
-                    "$ref": "#/$defs/preview"
+                    "$ref": "#/$defs/textOrCommand"
                 },
                 "accessories": {
                     "type": "array",
@@ -274,10 +274,6 @@
                             "type": "string",
                             "description": "The title of the action."
                         },
-                        "shell": {
-                            "type": "boolean",
-                            "description": "Whether to run the command in a shell."
-                        },
                         "inputs": {
                             "type": "array",
                             "items": {
@@ -300,7 +296,8 @@
                 },
                 {
                     "required": [
-                        "type"
+                        "type",
+                        "page"
                     ],
                     "additionalProperties": false,
                     "properties": {
@@ -323,11 +320,8 @@
                             },
                             "description": "The inputs to show when the action is run."
                         },
-                        "command": {
-                            "$ref": "#/$defs/command"
-                        },
                         "page": {
-                            "type": "string"
+                            "$ref": "#/$defs/textOrCommand"
                         }
                     }
                 }
@@ -360,6 +354,10 @@
                             "type": "string",
                             "description": "The placeholder of the input."
                         },
+                        "optional": {
+                            "type": "boolean",
+                            "description": "Whether the input is optional."
+                        },
                         "default": {
                             "type": "string",
                             "description": "The default value of the input."
@@ -386,6 +384,10 @@
                         "title": {
                             "type": "string",
                             "description": "The title of the input."
+                        },
+                        "optional": {
+                            "type": "boolean",
+                            "description": "Whether the input is optional."
                         },
                         "type": {
                             "const": "checkbox",
@@ -430,6 +432,10 @@
                             "const": "textarea",
                             "description": "The type of the input."
                         },
+                        "optional": {
+                            "type": "boolean",
+                            "description": "Whether the input is optional."
+                        },
                         "placeholder": {
                             "type": "string",
                             "description": "The placeholder of the input."
@@ -457,6 +463,10 @@
                         "title": {
                             "type": "string",
                             "description": "The title of the input."
+                        },
+                        "optional": {
+                            "type": "boolean",
+                            "description": "Whether the input is optional."
                         },
                         "type": {
                             "const": "dropdown",
@@ -495,8 +505,7 @@
         "command": {
             "oneOf": [
                 {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "string"
                 },
                 {
                     "type": "array",
@@ -531,23 +540,36 @@
                 }
             ]
         },
-        "preview": {
-            "description": "The preview to show in the detail view.",
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "highlight": {
-                    "type": "string",
-                    "description": "The highlighting of the preview text."
+        "textOrCommand": {
+            "oneOf": [
+                {
+                    "type": "string"
                 },
-                "text": {
-                    "type": "string",
-                    "description": "The text of the preview."
+                {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "command"
+                    ],
+                    "properties": {
+                        "command": {
+                            "$ref": "#/$defs/command"
+                        }
+                    }
                 },
-                "command": {
-                    "$ref": "#/$defs/command"
+                {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                        "text"
+                    ],
+                    "properties": {
+                        "text": {
+                            "type": "string"
+                        }
+                    }
                 }
-            }
+            ]
         }
     }
 }

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/google/shlex"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -23,7 +24,7 @@ type Page struct {
 	Actions []Action `json:"actions,omitempty"`
 
 	// Detail page
-	Preview *Preview `json:"preview,omitempty"`
+	Preview *TextOrCommand `json:"preview,omitempty"`
 
 	// List page
 	ShowPreview   bool       `json:"showPreview,omitempty"`
@@ -37,19 +38,13 @@ type EmptyView struct {
 	Actions []Action `json:"actions,omitempty"`
 }
 
-type Preview struct {
-	HighLight string   `json:"highlight,omitempty"`
-	Text      string   `json:"text,omitempty"`
-	Command   *Command `json:"command,omitempty"`
-}
-
 type ListItem struct {
-	Id          string   `json:"id,omitempty"`
-	Title       string   `json:"title"`
-	Subtitle    string   `json:"subtitle,omitempty"`
-	Preview     *Preview `json:"preview,omitempty"`
-	Accessories []string `json:"accessories,omitempty"`
-	Actions     []Action `json:"actions,omitempty"`
+	Id          string         `json:"id,omitempty"`
+	Title       string         `json:"title"`
+	Subtitle    string         `json:"subtitle,omitempty"`
+	Preview     *TextOrCommand `json:"preview,omitempty"`
+	Accessories []string       `json:"accessories,omitempty"`
+	Actions     []Action       `json:"actions,omitempty"`
 }
 
 type FormInputType string
@@ -72,6 +67,7 @@ type Input struct {
 	Title       string        `json:"title"`
 	Placeholder string        `json:"placeholder,omitempty"`
 	Default     any           `json:"default,omitempty"`
+	Optional    bool          `json:"optional,omitempty"`
 
 	// Only for dropdown
 	Items []DropDownItem `json:"items,omitempty"`
@@ -142,11 +138,37 @@ type Action struct {
 	Target string `json:"target,omitempty"`
 
 	// push
-	Page string `json:"page,omitempty"`
+	Page *TextOrCommand `json:"page,omitempty"`
 
 	// run
 	Command         *Command `json:"command,omitempty"`
 	ReloadOnSuccess bool     `json:"reloadOnSuccess,omitempty"`
+}
+
+type TextOrCommand struct {
+	Text    string   `json:"text,omitempty"`
+	Command *Command `json:"command,omitempty"`
+}
+
+func (p *TextOrCommand) UnmarshalJSON(data []byte) error {
+	var text string
+	if err := json.Unmarshal(data, &text); err == nil {
+		p.Text = text
+		return nil
+	}
+
+	var v struct {
+		Text    string   `json:"text"`
+		Command *Command `json:"command"`
+	}
+
+	if err := json.Unmarshal(data, &v); err == nil {
+		p.Text = v.Text
+		p.Command = v.Command
+		return nil
+	}
+
+	return errors.New("page must be a string or a command")
 }
 
 func NewReloadAction() Action {
@@ -175,7 +197,9 @@ func NewPushAction(title string, page string) Action {
 	return Action{
 		Title: title,
 		Type:  PushAction,
-		Page:  page,
+		Page: &TextOrCommand{
+			Text: page,
+		},
 	}
 }
 
@@ -191,19 +215,13 @@ func NewRunAction(title string, name string, args ...string) Action {
 
 type Command struct {
 	Name  string   `json:"name"`
-	Shell bool     `json:"shell,omitempty"`
 	Args  []string `json:"args,omitempty"`
 	Input string   `json:"input,omitempty"`
 	Dir   string   `json:"dir,omitempty"`
 }
 
 func (c Command) Cmd() *exec.Cmd {
-	var cmd *exec.Cmd
-	if c.Shell {
-		cmd = exec.Command("bash", "-c", c.Name)
-	} else {
-		cmd = exec.Command(c.Name, c.Args...)
-	}
+	cmd := exec.Command(c.Name, c.Args...)
 	cmd.Dir = c.Dir
 	if c.Input != "" {
 		cmd.Stdin = strings.NewReader(c.Input)
@@ -240,6 +258,22 @@ func (c Command) Output() ([]byte, error) {
 }
 
 func (c *Command) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		args, err := shlex.Split(s)
+		if err != nil {
+			return err
+		}
+
+		if len(args) == 0 {
+			return fmt.Errorf("empty command")
+		}
+
+		c.Name = args[0]
+		c.Args = args[1:]
+		return nil
+	}
+
 	var args []string
 	if err := json.Unmarshal(data, &args); err == nil {
 		if len(args) == 0 {
@@ -247,13 +281,6 @@ func (c *Command) UnmarshalJSON(data []byte) error {
 		}
 		c.Name = args[0]
 		c.Args = args[1:]
-		return nil
-	}
-
-	var s string
-	if err := json.Unmarshal(data, &s); err == nil {
-		c.Name = s
-		c.Shell = true
 		return nil
 	}
 

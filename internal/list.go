@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alecthomas/chroma/quick"
 	"github.com/atotto/clipboard"
 	"github.com/pomdtr/sunbeam/types"
 
@@ -58,9 +57,10 @@ func (i ListItem) Render(width int, selected bool) string {
 	}
 
 	subtitle := strings.Split(i.Subtitle, "\n")[0]
-	subtitle = fmt.Sprintf(" %s", subtitle)
+	subtitle = " " + subtitle
 	var blanks string
-	accessories := fmt.Sprintf(" %s", strings.Join(i.Accessories, " · "))
+
+	accessories := " " + strings.Join(i.Accessories, " · ")
 
 	// If the width is too small, we need to truncate the subtitle, accessories, or title (in that order)
 	if width >= lipgloss.Width(title+subtitle+accessories) {
@@ -70,9 +70,12 @@ func (i ListItem) Render(width int, selected bool) string {
 		subtitle = subtitle[:width-lipgloss.Width(title+accessories)]
 	} else if width >= lipgloss.Width(title) {
 		subtitle = ""
-		accessories = accessories[:width-lipgloss.Width(title)]
+		start_index := len(accessories) - (width - lipgloss.Width(title)) + 1
+		accessories = " " + accessories[start_index:]
 	} else {
+		subtitle = ""
 		accessories = ""
+		// Why is this -1? I don't know, but it works
 		title = title[:utils.Min(len(title), width)]
 	}
 
@@ -129,14 +132,7 @@ func NewList(page *types.Page) *List {
 		}
 
 		if item.Preview.Text != "" {
-			if item.Preview.HighLight == "" {
-				return item.Preview.Text
-			}
-			builder := strings.Builder{}
-			if err := quick.Highlight(&builder, item.Preview.Text, item.Preview.HighLight, "terminal16", "github"); err != nil {
-				return item.Preview.Text
-			}
-			return builder.String()
+			return item.Preview.Text
 		}
 
 		output, err := item.Preview.Command.Output()
@@ -146,21 +142,17 @@ func NewList(page *types.Page) *List {
 
 		content := string(output)
 
-		if item.Preview.HighLight == "" {
-			return content
-		}
-
-		builder := strings.Builder{}
-		if err := quick.Highlight(&builder, content, item.Preview.HighLight, "terminal16", "github"); err != nil {
-			return content
-		}
-		return builder.String()
+		return content
 	}
 
 	return &list
 }
 
 func (c *List) Init() tea.Cmd {
+	return c.header.Focus()
+}
+
+func (c *List) Focus() tea.Cmd {
 	return c.header.Focus()
 }
 
@@ -178,9 +170,8 @@ func (c *List) SetSize(width, height int) {
 	c.header.Width = width
 	c.actionList.SetSize(width, height)
 	if c.ShowPreview {
-		listWidth := width/3 - 1 // take separator into account
-		c.filter.SetSize(listWidth, availableHeight)
-		c.viewport.Width = width - listWidth
+		c.filter.SetSize(width/3, availableHeight)
+		c.viewport.Width = width - width/3 - (1 - width%3)
 		c.viewport.Height = availableHeight
 		c.RefreshDetail()
 	} else {

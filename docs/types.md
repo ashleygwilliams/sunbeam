@@ -47,7 +47,6 @@
 - object
   - `type`: `'run'` - The type of the action.
   - `title`: string - The title of the action.
-  - `shell`: boolean - Whether to run the command in a shell.
   - `inputs`: [Input](#input)[] - The inputs to show when the action is run.
   - `key`: string - The key used as a shortcut.
   - `command`: [Command](#command)
@@ -57,8 +56,7 @@
   - `title`: string - The title of the action.
   - `key`: string - The key used as a shortcut.
   - `inputs`: [Input](#input)[] - The inputs to show when the action is run.
-  - `command`: [Command](#command)
-  - `page`: string
+  - `page`: [TextOrCommand](#textorcommand)
 
 ## Input
 
@@ -69,11 +67,13 @@
   - `title`: string - The title of the input.
   - `type`: `'textfield'` - The type of the input.
   - `placeholder`: string - The placeholder of the input.
+  - `optional`: boolean - Whether the input is optional.
   - `default`: string - The default value of the input.
   - `secure`: boolean - Whether the input should be secure.
 - object
   - `name`: string - The name of the input.
   - `title`: string - The title of the input.
+  - `optional`: boolean - Whether the input is optional.
   - `type`: `'checkbox'` - The type of the input.
   - `default`: boolean - The default value of the input.
   - `label`: string - The label of the input.
@@ -83,16 +83,28 @@
   - `name`: string - The name of the input.
   - `title`: string - The title of the input.
   - `type`: `'textarea'` - The type of the input.
+  - `optional`: boolean - Whether the input is optional.
   - `placeholder`: string - The placeholder of the input.
   - `default`: string - The default value of the input.
 - object
   - `name`: string - The name of the input.
   - `title`: string - The title of the input.
+  - `optional`: boolean - Whether the input is optional.
   - `type`: `'dropdown'` - The type of the input.
   - `items`: object[] - The items of the input.
 - `title`: string - The title of the item.
 - `value`: string - The value of the item.
   - `default`: string - The default value of the input.
+
+## TextOrCommand
+
+**POSSIBLE VALUES**
+
+- string
+- object
+  - `command`: [Command](#command)
+- object
+  - `text`: string
 
 ## List
 
@@ -114,19 +126,9 @@
 - `title`: string - The title of the item.
 - `id`: string - The id of the item.
 - `subtitle`: string - The subtitle of the item.
-- `preview`: [Preview](#preview)
+- `preview`: [TextOrCommand](#textorcommand)
 - `accessories`: string[] - The accessories to show on the right side of the item.
 - `actions`: [Action](#action)[] - The actions attached to the item.
-
-## Preview
-
-The preview to show in the detail view.
-
-**PROPERTIES**
-
-- `highlight`: string - The highlighting of the preview text.
-- `text`: string - The text of the preview.
-- `command`: [Command](#command)
 
 ## Detail
 
@@ -136,5 +138,5 @@ A detail view displayign a preview and actions.
 
 - `type`: `'detail'` - The type of the response.
 - `title`: string - The title of the page.
-- `preview`: [Preview](#preview)
+- `preview`: [TextOrCommand](#textorcommand)
 - `actions`: [Action](#action)[] - The actions attached to the detail view.

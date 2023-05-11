@@ -119,6 +119,20 @@ func (c *CommandRunner) Init() tea.Cmd {
 	return tea.Batch(c.SetIsloading(true), c.Refresh)
 }
 
+func (c *CommandRunner) Focus() tea.Cmd {
+	if c.currentPage == nil {
+		return nil
+	}
+	switch c.currentPage.Type {
+	case types.ListPage:
+		return c.list.Focus()
+	case types.DetailPage:
+		return c.detail.Focus()
+	}
+
+	return nil
+}
+
 func (runner *CommandRunner) Refresh() tea.Msg {
 	page, err := runner.Generator()
 	if err != nil {
@@ -152,7 +166,7 @@ func (runner *CommandRunner) handleAction(action types.Action) tea.Cmd {
 				}
 			}
 
-			return tea.Quit()
+			return ExitMsg{}
 		}
 	case types.CopyAction:
 		return func() tea.Msg {
@@ -161,19 +175,23 @@ func (runner *CommandRunner) handleAction(action types.Action) tea.Cmd {
 				return err
 			}
 
-			return tea.Quit()
+			return ExitMsg{}
 		}
 
 	case types.PushAction:
 		return func() tea.Msg {
-			if action.Command != nil {
+			if action.Page == nil {
+				return errors.New("page is nil")
+			}
+
+			if action.Page.Command != nil {
 				return PushPageMsg{
-					Page: NewRunner(NewCommandGenerator(action.Command)),
+					Page: NewRunner(NewCommandGenerator(action.Page.Command)),
 				}
 			}
 
 			return PushPageMsg{
-				Page: NewRunner(NewFileGenerator(action.Page)),
+				Page: NewRunner(NewFileGenerator(action.Page.Text)),
 			}
 		}
 
@@ -282,9 +300,6 @@ func (runner *CommandRunner) Update(msg tea.Msg) (Page, tea.Cmd) {
 			}
 
 			runner.detail = NewDetail(page.Title, detailFunc, page.Actions)
-			if page.Preview != nil && page.Preview.HighLight != "" {
-				runner.detail.Language = page.Preview.HighLight
-			}
 			runner.detail.SetSize(runner.width, runner.height)
 
 			return runner, runner.detail.Init()
@@ -369,8 +384,6 @@ func (runner *CommandRunner) Update(msg tea.Msg) (Page, tea.Cmd) {
 			},
 		})
 
-		errorView.Language = "markdown"
-
 		runner.err = errorView
 		runner.err.SetSize(runner.width, runner.height)
 		return runner, runner.err.Init()
@@ -442,7 +455,6 @@ func RenderCommand(command *types.Command, old, new string) *types.Command {
 	}
 	rendered.Input = strings.ReplaceAll(command.Input, old, new)
 	rendered.Dir = strings.ReplaceAll(command.Dir, old, new)
-	rendered.Shell = command.Shell
 
 	return &rendered
 }
@@ -454,7 +466,13 @@ func RenderAction(action types.Action, old, new string) types.Action {
 
 	action.Target = strings.ReplaceAll(action.Target, old, url.QueryEscape(new))
 	action.Text = strings.ReplaceAll(action.Text, old, new)
-	action.Page = strings.ReplaceAll(action.Page, old, new)
+	if action.Page != nil {
+		if action.Page.Command != nil {
+			action.Page.Command = RenderCommand(action.Page.Command, old, new)
+		} else {
+			action.Page.Text = strings.ReplaceAll(action.Page.Text, old, new)
+		}
+	}
 	return action
 }
 
@@ -481,8 +499,8 @@ func expandPage(page types.Page, dir string) types.Page {
 			action.Command.Dir = filepath.Join(dir, action.Command.Dir)
 		}
 
-		if action.Page != "" && !filepath.IsAbs(action.Page) {
-			action.Page = filepath.Join(dir, action.Page)
+		if action.Page != nil && action.Page.Text != "" && !filepath.IsAbs(action.Page.Text) {
+			action.Page.Text = filepath.Join(dir, action.Page.Text)
 		}
 
 		if action.Target != "" {

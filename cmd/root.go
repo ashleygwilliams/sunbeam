@@ -20,6 +20,7 @@ import (
 
 	"github.com/pomdtr/sunbeam/internal"
 	"github.com/pomdtr/sunbeam/types"
+	"github.com/pomdtr/sunbeam/utils"
 )
 
 const (
@@ -27,7 +28,18 @@ const (
 	extensionGroupID = "extension"
 )
 
-func Execute(version string) error {
+var options internal.SunbeamOptions
+
+func init() {
+	options = internal.SunbeamOptions{
+		MaxHeight:  utils.LookupIntEnv("SUNBEAM_HEIGHT", 35),
+		MaxWidth:   utils.LookupIntEnv("SUNBEAM_WIDTH", 110),
+		FullScreen: utils.LookupBoolEnv("SUNBEAM_FULLSCREEN", true),
+		Border:     utils.LookupBoolEnv("SUNBEAM_BORDER", true),
+	}
+}
+
+func NewCmdRoot(version string) (*cobra.Command, error) {
 	dataDir := filepath.Join(xdg.DataHome, "sunbeam")
 	extensionRoot := filepath.Join(dataDir, "extensions")
 
@@ -40,7 +52,6 @@ func Execute(version string) error {
 		Long: `Sunbeam is a command line launcher for your terminal, inspired by fzf and raycast.
 
 See https://pomdtr.github.io/sunbeam for more information.`,
-		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cwd, err := os.Getwd()
 			if err != nil {
@@ -73,7 +84,7 @@ See https://pomdtr.github.io/sunbeam for more information.`,
 
 	extensions, err := ListExtensions(extensionRoot)
 	if err != nil {
-		return fmt.Errorf("could not list extensions: %w", err)
+		return nil, fmt.Errorf("could not list extensions: %w", err)
 	}
 
 	rootCmd.AddGroup(
@@ -82,6 +93,7 @@ See https://pomdtr.github.io/sunbeam for more information.`,
 	)
 	rootCmd.AddCommand(NewExtensionCmd(extensionRoot, extensions))
 	rootCmd.AddCommand(NewQueryCmd())
+	rootCmd.AddCommand(NewArgsCmd())
 	rootCmd.AddCommand(NewFetchCmd())
 	rootCmd.AddCommand(NewReadCmd())
 	rootCmd.AddCommand(NewTriggerCmd())
@@ -130,7 +142,7 @@ See https://pomdtr.github.io/sunbeam for more information.`,
 		rootCmd.AddCommand(NewExtensionExecCmd(extensionRoot, extension, manifest))
 	}
 
-	return rootCmd.Execute()
+	return rootCmd, nil
 }
 
 func NewExtensionExecCmd(extensionRoot string, extensionName string, manifest *ExtensionManifest) *cobra.Command {
@@ -206,7 +218,7 @@ func Run(generator internal.PageGenerator) error {
 	}
 
 	runner := internal.NewRunner(generator)
-	return internal.Draw(runner)
+	return internal.Draw(runner, options)
 }
 
 func buildDoc(command *cobra.Command) (string, error) {

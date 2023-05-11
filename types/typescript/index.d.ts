@@ -100,10 +100,6 @@ export type Action =
        */
       title?: string;
       /**
-       * Whether to run the command in a shell.
-       */
-      shell?: boolean;
-      /**
        * The inputs to show when the action is run.
        */
       inputs?: Input[];
@@ -134,8 +130,7 @@ export type Action =
        * The inputs to show when the action is run.
        */
       inputs?: Input[];
-      command?: Command;
-      page?: string;
+      page: TextOrCommand;
     };
 export type Input =
   | {
@@ -156,6 +151,10 @@ export type Input =
        */
       placeholder?: string;
       /**
+       * Whether the input is optional.
+       */
+      optional?: boolean;
+      /**
        * The default value of the input.
        */
       default?: string;
@@ -173,6 +172,10 @@ export type Input =
        * The title of the input.
        */
       title: string;
+      /**
+       * Whether the input is optional.
+       */
+      optional?: boolean;
       /**
        * The type of the input.
        */
@@ -208,6 +211,10 @@ export type Input =
        */
       type: "textarea";
       /**
+       * Whether the input is optional.
+       */
+      optional?: boolean;
+      /**
        * The placeholder of the input.
        */
       placeholder?: string;
@@ -225,6 +232,10 @@ export type Input =
        * The title of the input.
        */
       title: string;
+      /**
+       * Whether the input is optional.
+       */
+      optional?: boolean;
       /**
        * The type of the input.
        */
@@ -246,6 +257,14 @@ export type Input =
        * The default value of the input.
        */
       default?: string;
+    };
+export type TextOrCommand =
+  | string
+  | {
+      command: Command;
+    }
+  | {
+      text: string;
     };
 
 export interface List {
@@ -287,7 +306,7 @@ export interface Listitem {
    * The subtitle of the item.
    */
   subtitle?: string;
-  preview?: Preview;
+  preview?: TextOrCommand;
   /**
    * The accessories to show on the right side of the item.
    */
@@ -296,20 +315,6 @@ export interface Listitem {
    * The actions attached to the item.
    */
   actions?: Action[];
-}
-/**
- * The preview to show in the detail view.
- */
-export interface Preview {
-  /**
-   * The highlighting of the preview text.
-   */
-  highlight?: string;
-  /**
-   * The text of the preview.
-   */
-  text?: string;
-  command?: Command;
 }
 /**
  * A detail view displayign a preview and actions.
@@ -323,7 +328,7 @@ export interface Detail {
    * The title of the page.
    */
   title?: string;
-  preview: Preview;
+  preview: TextOrCommand;
   /**
    * The actions attached to the detail view.
    */
